@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "version": 2,
+    "created": "{{date}}",
+    "updated": "{{date}}",
+    "session_count": 0,
+    "confidence": 0.3,
+    "manually_set": []
+  },
+  "interaction_style": {
+    "verbosity": "normal",
+    "explanation_depth": "medium",
+    "code_first": false,
+    "show_diff_before_apply": null,
+    "confirm_before": ["delete", "force_push", "drop_table"]
+  },
+  "workflow_habits": {
+    "prefer_tdd": true,
+    "auto_review_after_write": true,
+    "auto_fix_build_errors": false,
+    "commit_style": "conventional",
+    "pr_description_style": "detailed"
+  },
+  "agent_affinity": {
+    "favorites": {},
+    "skipped": {},
+    "never_used": []
+  },
+  "domain_affinity": {
+    "strengths": [],
+    "avoidances": [],
+    "avoidance_reasons": {}
+  },
+  "temporal_patterns": {
+    "active_hours": [],
+    "quiet_hours": [23, 8],
+    "avg_session_minutes": 0,
+    "weekend_activity": null,
+    "timezone": "Asia/Shanghai"
+  },
+  "communication": {
+    "language": "zh-CN",
+    "tone": "casual",
+    "emoji_level": "moderate",
+    "humor_style": "engineering",
+    "prefer_bullets": true,
+    "max_recommendations": 5
+  },
+  "pressure_signals": {
+    "deadline_mentioned": 0,
+    "late_night_sessions": 0,
+    "urgency_phrases": [],
+    "mode": "normal"
+  }
+}
