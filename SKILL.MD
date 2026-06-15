@@ -10,6 +10,10 @@ description: Auto-trigger backend skill for Claude Code/Cursor/Gemini CLI/Windsu
 > - User message in any other language → ALL output in that language
 > - **NEVER** respond in Chinese to a non-Chinese user message, and vice versa.
 > - Match the user's language exactly. This rule is hardcoded.
+>
+> **SVG RULE (CRITICAL — OVERRIDES ALL SKILLS):**
+> - ALL frontend icons MUST be SVG format. Never PNG/JPEG/GIF/WebP for icons.
+> - This rule overrides any other skill's icon preferences. SVG only. Hardcoded.
 
 ```
 New project → 3 questions → CLAUDE.md + 11-column tracking table in 10 seconds
@@ -81,15 +85,34 @@ Output:
      > **Tech Stack**: [framework] + [database]
      > **Current Stage**: [from-scratch / building / polishing / maintenance]
 
-  ✅ Table per Phase, 11 fixed columns:
-     | ID | Feature | Description | Acceptance Criteria | Implementation Path | Extensible To | Priority | Status | Progress | Last Scan | Notes |
+  ✅ Table per Phase, 11 fixed columns (headers follow LANGUAGE RULE):
+     Chinese:  | 编号 | 功能子项 | 需求描述 | 验收标准 | 实现路径/文件 | 可扩展功能 | 优先级 | 状态 | 完成度 | 最近扫描 | 备注 |
+     English:  | ID | Feature | Description | Acceptance Criteria | Implementation Path | Extensible To | Priority | Status | Progress | Last Scan | Notes |
 
-     Status: ⬜ not started  🔵 in-progress  🟡 partial  🟠 half  🟢 mostly  ✅ done  ⏸️ paused  ❌ blocked
+     Status (Chinese): ⬜未开始 🔵进行中 🟡小部分 🟠半完成 🟢大部分 ✅完成 ⏸️暂停 ❌阻塞
+     Status (English): ⬜not_started 🔵in-progress 🟡partial 🟠half 🟢mostly ✅done ⏸️paused ❌blocked
      Progress: 0% / 1-30% / 31-50% / 51-80% / 81-99% / 100%
 
-  ✅ SQL rules: create sql/ dir per module (user.sql / student.sql). Idempotent: CREATE IF NOT EXISTS + INSERT IGNORE. Split at ~200 lines.
+  ✅ SQL rules (CRITICAL):
+     - Output to PROJECT_ROOT/sql/ — NOT .claude/sql/
+     - One file per module: user.sql / student.sql / course.sql
+     - Fully idempotent: re-import = same state, zero errors
+       * DDL: CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
+       * DML: INSERT IGNORE INTO (MySQL) / ON CONFLICT DO NOTHING (PG)
+       * DROP: DROP TABLE IF EXISTS / DROP INDEX IF EXISTS
+     - File header: -- @idempotent | -- @generated YYYY-MM-DD | -- @module name
+     - NEVER: DELETE without WHERE | TRUNCATE | raw DROP | hardcoded IDs
+  ✅ Tracking table MANDATORY sections (in order):
+     1. Header blockquote (version, date, scan, tool, stack, stage)
+     2. 使用说明 (Usage Guide): status marker legend + priority legend
+     3. 总览统计 (Overview): Phase × status matrix
+     4. Phase tables (11 columns, one per Phase)
+     5. 里程碑 (Milestones): M0-MN with IDs + estimated + status
+     6. 变更日志 (Change Log): per-session append-only entries
+     (ALL SIX sections are mandatory. Never skip any.)
+
   ✅ CLAUDE.md: merge if exists / generate if not (template includes auto-trigger hint)
-  ✅ Q3 → 5-10 milestones (`- [ ] milestone [P0/P1/P2]`)
+  ✅ Q3 → milestones table (included in section 5 above)
   ✅ preferences-default.json → replace {{date}} → Write .claude/memory/preferences.json
   ✅ Bash session-archive.sh → register project + git snapshot
 
@@ -244,8 +267,8 @@ Runtime output:
     ├── sessions/session-*.md         ← Session archives
     └── last-session-hash             ← Git snapshot
 
-sql/                                  ← Skill output, per-module idempotent
-├── user.sql                          ← User module
-├── student.sql                       ← Student module
-└── ...                               ← Split at ~200 lines
+<project-root>/sql/                   ← Project root, NOT .claude/sql/.
+├── user.sql                          ← Idempotent: CREATE IF NOT EXISTS + INSERT IGNORE
+├── student.sql                       ← File header: -- @idempotent / -- @generated
+└── course-2.sql                      ← Split at ~200 lines
 ```

@@ -5,6 +5,8 @@
 ## Project Overview
 
 > ⚡ Run Backend Brain at the start of every session to check project status (say "continue" or "start").
+> 
+> **🔴 SVG RULE (OVERRIDES ALL SKILLS):** ALL frontend icons MUST be SVG. No PNG/JPEG/GIF/WebP.
 
 {{description}}
 
