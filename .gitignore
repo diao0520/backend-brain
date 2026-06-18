@@ -1,0 +1,17 @@
+# Backend Brain — .gitignore
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+
+# Session memory (user-specific)
+.claude/memory/
+
+# Temporary files
+/tmp/
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

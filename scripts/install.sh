@@ -50,7 +50,7 @@ command -v redis-cli >/dev/null 2>&1 && timeout 1 redis-cli ping >/dev/null 2>&1
 if $CHECK; then
     say ""
     say "${B}── DRY RUN ──${N}"
-    say "  Will install 11 files to: ${SKILL_DIR}"
+    say "  Will install 25 files to: ${SKILL_DIR}"
     say "  Will add Stop Hook to: ${SETTINGS}"
     say "  No source files will be modified"
     say ""
@@ -60,21 +60,27 @@ fi
 
 # 2. Dirs
 say "${B}→${N} Creating directories..."
-mkdir -p "${SKILL_DIR}/assets/templates" "${SKILL_DIR}/scripts" "${SKILL_DIR}/references" "${PROJECT}/.claude/memory/projects"
+mkdir -p "${SKILL_DIR}/assets/templates" "${SKILL_DIR}/scripts" "${SKILL_DIR}/references" "${SKILL_DIR}/adapters" "${PROJECT}/.claude/memory/projects"
 say "  ${G}✅${N} .claude/skills/${NAME}/"
 
 # 3. Copy
 say "${B}→${N} Installing files..."
 for f in SKILL.MD README.md \
+         references/phase-0-briefing.md references/phase-1-analysis.md \
+         references/phase-2-onboarding.md references/phase-3-memory.md \
+         references/phase-4-preflight.md references/phase-5-search.md \
+         references/phase-6-quality-gate.md references/phase-7-archive.md \
          references/preferences-system.md references/skill-orchestration.md \
+         adapters/cursor.md adapters/gemini.md adapters/copilot.md adapters/windsurf.md \
          assets/templates/claude-md-boilerplate.md \
          assets/templates/session-summary.md \
          assets/templates/preferences-default.json \
          scripts/preflight.sh scripts/git-summary.sh \
-         scripts/session-archive.sh scripts/search-memory.sh; do
+         scripts/session-archive.sh scripts/search-memory.sh \
+         scripts/skill-matcher.sh scripts/audit-tracker.sh; do
     cp "${SRC}/${f}" "${SKILL_DIR}/${f}"
 done
-say "  ${G}✅${N} 11  files"
+say "  ${G}✅${N} 25 files"
 
 # 4. Permissions
 chmod +x "${SKILL_DIR}/scripts/"*.sh 2>/dev/null || true

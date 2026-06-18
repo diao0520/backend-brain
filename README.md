@@ -5,15 +5,15 @@
 <p align="center">
   <b>Open your project. AI remembers where you left off.</b><br>
   <b>打开项目，AI 自动记住你上次做到哪里。</b><br>
-  <sub>Pure Bash + Markdown · 1000+ auditable lines · Zero dependencies · No data uploads</sub><br>
-  <sub>纯 Bash + Markdown · 1000+ 行可审计代码 · 零依赖 · 不上传任何数据</sub>
+  <sub>Pure Bash + Markdown · 1500+ auditable lines · Zero dependencies · No data uploads</sub><br>
+  <sub>纯 Bash + Markdown · 1500+ 行可审计代码 · 零依赖 · 不上传任何数据</sub>
 </p>
 
 <p align="center">
   <a href="#install"><img src="https://img.shields.io/badge/install-bash%20install.sh-green"></a>
   <a href="#supported-tools"><img src="https://img.shields.io/badge/tools-Claude%20Code%20%7C%20Cursor%20%7C%20Gemini%20%7C%204%2B-blue"></a>
   <a href="#"><img src="https://img.shields.io/badge/focus-backend-orange"></a>
-  <a href="#"><img src="https://img.shields.io/badge/audit-1000%2B%20lines-lightgrey"></a>
+  <a href="#"><img src="https://img.shields.io/badge/audit-1500%2B%20lines-lightgrey"></a>
 </p>
 
 ---
@@ -64,7 +64,9 @@ bash .claude/skills/backend-brain/scripts/install.sh --check
 | **DB Checks** · 数据库检查 | Flyway / Liquibase / Alembic migration detection + Redis connectivity · 迁移检测 + Redis 连通性 |
 | **CLAUDE.md Generation** · CLAUDE.md 生成 | API conventions, DB rules, layered architecture, middleware chain · API 规范、数据库规则、分层架构、中间件链 |
 | **Tracking Table** · 跟踪表 | 11 columns: ID/Feature/Description/Acceptance/Path/Priority/Status/Progress/Scan/Notes · 11 列 |
+| **Project Analysis** · 项目分析 | Phase 1: Deep codebase scan → health report card (A-F) with recommendations · 深度代码扫描 → 健康报告卡 |
 | **Auto-Audit** · 自动审计 | Match git changes to tracking items → auto-update status · Git 变更匹配跟踪项 → 自动更新状态 |
+| **Quality Gate** · 质量门禁 | Phase 6: Pre-commit build/lint/test/security → PASS/WARN/BLOCK · 提交前检查 → 通过/警告/阻止 |
 | **Memory Search** · 记忆搜索 | `/recall <keyword>` → grep session history (zero-dependency) · `/recall <关键词>` → 搜索会话历史（零依赖） |
 | **Change Log** · 变更日志 | One entry per session, like git commits · 每次会话一条记录，类似 Git 提交 |
 | **Idempotent SQL** · 幂等 SQL | sql/ dir per module, `CREATE IF NOT EXISTS` + `INSERT IGNORE` |
@@ -109,14 +111,22 @@ You: "Database queries are slow" · 你: "数据库查询太慢了"
 > 不只是一个技能 — 是一套**跟踪表驱动的 AI 开发方法论**。
 
 ```
-1. Phase 2 Onboarding → 3 questions → generates CLAUDE.md + 11-column tracking table
+0. Phase 0 Auto Briefing → 5 parallel checks + 4-case routing
+   第零阶段自动简报 → 5项并行检查 + 4种分流
+1. Phase 1 Project Analysis → deep scan, health report card (A-F)
+   第一阶段项目分析 → 深度扫描，健康报告卡
+2. Phase 2 Onboarding → 3 questions → generates CLAUDE.md + 11-column tracking table
    第二阶段引导 → 3 个问题 → 生成 CLAUDE.md + 11 列跟踪表
-2. Every session → auto briefing + match git changes → update tracking table
-   每次会话 → 自动简报 + 匹配 Git 变更 → 更新跟踪表
-3. Every session end → change log + Stop Hook archive → seamless next session
-   每次会话结束 → 变更日志 + Stop Hook 存档 → 下次会话无缝衔接
-4. Team sharing → git add .claude/memory/ → git push → everyone synced
-   团队共享 → git add .claude/memory/ → git push → 全员同步
+3. Phase 3 Memory Recovery → restore last session context
+   第三阶段记忆恢复 → 恢复上次会话上下文
+4. Phase 4 Pre-flight → environment health check
+   第四阶段预检 → 环境健康检查
+5. Phase 5 Memory Search → grep session history
+   第五阶段记忆搜索 → 搜索会话历史
+6. Phase 6 Quality Gate → build/lint/test/security before commit
+   第六阶段质量门禁 → 提交前构建/检查/测试/安全
+7. Phase 7 Archive → session snapshot + index update
+   第七阶段存档 → 会话快照 + 索引更新
 ```
 
 **Competitors are memory libraries. Backend Brain is your daily standup. Only the 3 things that matter.**
@@ -142,7 +152,7 @@ You: "Database queries are slow" · 你: "数据库查询太慢了"
 
 | Tool · 工具 | Status · 状态 | Integration · 集成方式 |
 |------|:--:|------|
-| **Claude Code** | ✅ Recommended · 推荐 | `.claude/skills/backend-brain/` — full Phase 0-7 · 完整 Phase 0-7 |
+| **Claude Code** | ✅ Recommended · 推荐 | `.claude/skills/backend-brain/` — full Phase 0-7 (10 references + 4 adapters) · 完整阶段0-7 |
 | **Cursor** | ✅ | `.cursorrules` — preflight + tracking table · 预检 + 跟踪表 |
 | **Gemini CLI** | ✅ | `.gemini/rules/` — preflight + session memory · 预检 + 会话记忆 |
 | **GitHub Copilot** | ✅ | `.github/copilot-instructions.md` — tracking table context · 跟踪表上下文 |

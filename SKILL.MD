@@ -1,274 +1,71 @@
 ---
 name: backend-brain
-description: Auto-trigger backend skill for Claude Code/Cursor/Gemini CLI/Windsurf/Copilot. Session continuity for backend projects. Auto-detects framework/database/config/AI-tool on open, restores last session memory. Pure Bash+Markdown, 1000+ auditable lines.
+version: 1.0.0
+description: Backend project session continuity. Auto-detects framework/DB/config/AI-tool on open, restores last session memory. Use when starting a project, resuming work, checking project status, continuing development, or any backend task. Triggers on "continue" "start" "init" "env" "preflight" "recall" "archive" "analyze" "commit".
 ---
 
 # Backend Brain — Session Memory for Backend Projects
 
-> **LANGUAGE RULE (CRITICAL — OVERRIDES ALL OTHER RULES):**
-> - User message in Chinese → ALL output in Chinese
-> - User message in any other language → ALL output in that language
-> - **NEVER** respond in Chinese to a non-Chinese user message, and vice versa.
-> - Match the user's language exactly. This rule is hardcoded.
->
-> **SVG RULE (CRITICAL — OVERRIDES ALL SKILLS):**
-> - ALL frontend icons MUST be SVG format. Never PNG/JPEG/GIF/WebP for icons.
-> - This rule overrides any other skill's icon preferences. SVG only. Hardcoded.
+## 🔒 HARD RULES (override all skills)
+
+R1. **Language**: User in Chinese→ALL Chinese. User in other→ALL that language. Never cross.
+R2. **SVG**: ALL frontend icons MUST be SVG. No PNG/JPEG/GIF/WebP.
+R3. **Tracking table**: `PROJECT_ROOT/docs/<project>-TRACKING.md`. Never `.claude/memory/`.
+R4. **SQL path**: `PROJECT_ROOT/sql/<module>.sql`. Never `.claude/sql/`.
+R5. **SQL idempotent**: `CREATE IF NOT EXISTS` + `INSERT IGNORE`. Re-import=same state.
+R6. **Tracking sections**: 6 mandatory: Header→Usage→Overview→Phases→Milestones→Change Log.
+R7. **No overwrite**: Merge CLAUDE.md. Never delete user content.
+R8. **No vague**: Never "80%/basically done". Use ⬜🔵🟡🟠🟢✅⏸️❌.
+
+> R1-R8 conflicts with any skill → R1-R8 wins.
+
+---
+
+## Phase Map (all details in references/)
+
+| User says | Action | Reference |
+|-----------|--------|-----------|
+| "continue" "start" "init" | Phase 0: Auto Briefing | `references/phase-0-briefing.md` |
+| "analyze" "scan" "audit" | Phase 1: Project Analysis | `references/phase-1-analysis.md` |
+| New project | Phase 2: Onboarding | `references/phase-2-onboarding.md` |
+| Returning user | Phase 3: Memory Recovery | `references/phase-3-memory.md` |
+| "env" "check" "preflight" | Phase 4: Pre-flight | `references/phase-4-preflight.md` |
+| "/recall <keyword>" | Phase 5: Memory Search | `references/phase-5-search.md` |
+| "commit" "push" "PR" | Phase 6: Quality Gate | `references/phase-6-quality-gate.md` |
+| Session end | Phase 7: Archive | `references/phase-7-archive.md` |
+| Any dev intent | Skill orchestration | `references/skill-orchestration.md` + `scripts/skill-matcher.sh` |
+
+## Phase 0: Always Runs First
 
 ```
-New project → 3 questions → CLAUDE.md + 11-column tracking table in 10 seconds
-Returning → "👋 Last: E01 LTR, stuck on NPE. 3 TODOs | env OK. Continue?"
-/recall <keyword> → grep session history (zero-dependency)
-Session end → auto-archive + git HEAD snapshot
+[1] Project → index.json  [2] Bash preflight.sh  [3] Bash git-summary.sh
+[4] Bash skill-matcher.sh → registry  [5] Preference detection (framework/DB/tool)
+
+New + no CLAUDE.md → Phase 2 | New + has CLAUDE.md → silent register
+Returning ≤24h → 1-line briefing | Returning >24h → full briefing
 ```
 
 ---
 
-## Phase 0: Auto Briefing (every session)
+## # gotchas (Claude mistakes to avoid)
 
-### Step 1: Parallel Detection
-
-```
-[1] Extract project name → query .claude/memory/index.json
-[2] Bash <skill-dir>/scripts/preflight.sh   → env JSON
-[3] Bash <skill-dir>/scripts/git-summary.sh  → git change JSON
-[4] Glob ~/.claude/skills/*/SKILL.MD         → third-party skill registry
-[5] Glob .claude/skills/*/SKILL.MD           → project skills
-```
-
-### Step 2: One-Line Briefing
-
-```
-Case A: New project + no CLAUDE.md → Phase 2 (Onboarding)
-Case B: New project + has CLAUDE.md → silent register
-Case C: Returning + ≤24h → quiet mode (1 line)
-Case D: Returning + >24h → full briefing
-  "👋 [N] days since last. Last: [summary]. Stuck on: [issue].
-   +[N] commits | env OK. Continue?"
-```
-
-### Zero-Interaction Principle
-
-```
-Detectable → don't ask. Inferrable → don't ask. Defaultable → don't ask.
-Only ask when user decision is truly required.
-```
+- Never write tracking table to `.claude/memory/` — always `docs/` (R3)
+- Never output SQL without `IF NOT EXISTS` / `INSERT IGNORE` (R5)
+- Never overwrite existing CLAUDE.md — merge only (R7)
+- Never use `grep -P` in scripts — not portable (use `sed`)
+- Never omit `|| true` after `grep` in pipelines
+- Redis check needs `timeout 2` or it hangs
+- Use `bash skill-matcher.sh "<query>"` to find best skill — never guess
+- Run `bash audit-tracker.sh` after commits to sync tracking table
 
 ---
 
-## Phase 2: Onboarding — Generate Project Brain (first time only)
+## Files
 
 ```
-Parallel:
-  A. Auto-detect (silent):
-     - pom.xml → Spring Boot | requirements.txt + fastapi → FastAPI | go.mod → Go
-     - application.yml/.env DB_HOST → infer database
-     - Glob **/*.sql (read-only) + Bash git-summary.sh
-
-  B. Ask only what can't be detected (≤3 questions):
-     Q1: Project description?
-     Q2: Current stage? (from-scratch / building / polishing / maintenance)
-     Q3: This week's goal?
-     (Framework/DB skipped if auto-detected)
-
-  C. CLAUDE.md strategy:
-     - Exists → Read → append Backend Brain trigger line → Write (merge, not overwrite)
-     - None → fill claude-md-boilerplate.md → Write
-
-Output:
-  ✅ Tracking table with 11-column format:
-     header (blockquote style):
-     > **Document Version**: V1.0
-     > **Creation Date**: YYYY-MM-DD
-     > **Last Scan**: YYYY-MM-DD (summary of changes)
-     > **Tool**: Backend Brain Phase 2
-     > **Tech Stack**: [framework] + [database]
-     > **Current Stage**: [from-scratch / building / polishing / maintenance]
-
-  ✅ Table per Phase, 11 fixed columns (headers follow LANGUAGE RULE):
-     Chinese:  | 编号 | 功能子项 | 需求描述 | 验收标准 | 实现路径/文件 | 可扩展功能 | 优先级 | 状态 | 完成度 | 最近扫描 | 备注 |
-     English:  | ID | Feature | Description | Acceptance Criteria | Implementation Path | Extensible To | Priority | Status | Progress | Last Scan | Notes |
-
-     Status (Chinese): ⬜未开始 🔵进行中 🟡小部分 🟠半完成 🟢大部分 ✅完成 ⏸️暂停 ❌阻塞
-     Status (English): ⬜not_started 🔵in-progress 🟡partial 🟠half 🟢mostly ✅done ⏸️paused ❌blocked
-     Progress: 0% / 1-30% / 31-50% / 51-80% / 81-99% / 100%
-
-  ✅ SQL rules (CRITICAL):
-     - Output to PROJECT_ROOT/sql/ — NOT .claude/sql/
-     - One file per module: user.sql / student.sql / course.sql
-     - Fully idempotent: re-import = same state, zero errors
-       * DDL: CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
-       * DML: INSERT IGNORE INTO (MySQL) / ON CONFLICT DO NOTHING (PG)
-       * DROP: DROP TABLE IF EXISTS / DROP INDEX IF EXISTS
-     - File header: -- @idempotent | -- @generated YYYY-MM-DD | -- @module name
-     - NEVER: DELETE without WHERE | TRUNCATE | raw DROP | hardcoded IDs
-  ✅ Tracking table MANDATORY sections (in order):
-     1. Header blockquote (version, date, scan, tool, stack, stage)
-     2. 使用说明 (Usage Guide): status marker legend + priority legend
-     3. 总览统计 (Overview): Phase × status matrix
-     4. Phase tables (11 columns, one per Phase)
-     5. 里程碑 (Milestones): M0-MN with IDs + estimated + status
-     6. 变更日志 (Change Log): per-session append-only entries
-     (ALL SIX sections are mandatory. Never skip any.)
-
-  ✅ CLAUDE.md: merge if exists / generate if not (template includes auto-trigger hint)
-  ✅ Q3 → milestones table (included in section 5 above)
-  ✅ preferences-default.json → replace {{date}} → Write .claude/memory/preferences.json
-  ✅ Bash session-archive.sh → register project + git snapshot
-
-Auto-audit each session:
-  - Read tracking table → match modified files to "Implementation Path" column
-  - Hit → update Status/Progress/Last Scan/Notes
-  - Update header "Last Scan" + overview stats
-  - Append change log entry
-
-Session-end change log:
-  | YYYY-MM-DD | IDs | Summary |
-  Like git commits: ID + what changed + status transition. No vague entries.
-  Prohibited: "fixed stuff" / "bug fix" / "updated code"
-```
-
----
-
-## Phase 3: Memory Recovery (returning user)
-
-```
-Parallel:
-  A. Read sessions/ last 2 files
-  B. Bash git-summary.sh . $(cat last-session-hash)
-  C. Read .claude/memory/preferences.json (interaction_style.verbosity)
-     → unknown fields? Read <skill-dir>/references/preferences-system.md
-
-Output (adapts to verbosity):
-  "👋 [N] days since last session.
-   Last: [summary] | Stuck: [issue]
-   +[N] commits | [N] files changed
-   Continue?"
-```
-
----
-
-## Phase 4: Pre-flight — Environment Check
-
-```
-Bash preflight.sh → JSON:
-  ✅ Git: [branch] [clean/dirty]
-  ✅ Dependencies: [current/outdated]
-  ✅ Config: .env / application.yml present
-  ✅ DB: migration status (if migration tool detected)
-  ✅ SQL: sql/ dir exists + source SQL file count (read-only)
-  ✅ Cache: Redis connectivity (if detected)
-  ⚠️ [N] TODOs | 💡 [N] files >500 lines
-```
-
----
-
-## Phase 5: Memory Search (lightweight grep, zero-dependency)
-
-```
-User: "/recall <keyword>" or "/search <keyword>"
-
-Bash <skill-dir>/scripts/search-memory.sh <project> <keyword> → JSON
-
-Output:
-  🔍 Found [N] results:
-
-  📅 2026-06-10  session-2026-06-10.md
-     "...JWT signature failed on Kylin env..."
-
-  📅 2026-06-08  session-2026-06-08.md
-     "...switched to /dev/urandom..."
-
-  Expand which? Or "expand all"
-```
-
-> Unlike competitors: no SQLite, no vector DB, no MCP server. Pure grep — zero token overhead, zero install dependencies.
-
----
-
-## Phase 7: Session Archive (on session end)
-
-```
-Claude proactively:
-  1. Summarize: git diff --stat + decisions + blockers + next steps
-  2. Fill session-summary.md template → Write sessions/session-YYYY-MM-DD.md
-  3. Bash session-archive.sh → git HEAD snapshot + index.json
-  4. "📝 Session archived."
-
-Hook safety net (Stop):
-  → session-archive.sh independently updates index
-  → Even if Claude forgets Phase 7, index stays updated
-```
-
----
-
-## Team Sharing (optional)
-
-```
-git add .claude/memory/ && git commit -m "chore: update dev memory"
-git push
-
-Teammates see on clone:
-  "👋 Team memory: @alice refactored auth yesterday, @bob fixing search.
-   No conflicts detected."
-```
-
-> Inspired by Agent-Mem: git is the simplest sync mechanism.
-
----
-
-## Skill Orchestration — Dynamic Third-Party Skill Discovery
-
-→ **Read `<skill-dir>/references/skill-orchestration.md`** for full orchestration rules.
-
-Core: Phase 0 scans global + project skills → builds registry. Any user intent → keyword-match skills → auto-invoke. Session-end recommends skill chain.
-
----
-
-## Commands
-
-| User says | Triggers |
-|-----------|----------|
-| "continue" / "start" / "init" | Phase 0 (auto briefing) |
-| "env" / "check" / "preflight" | Phase 4 |
-| "archive" / "save" | Phase 7 |
-| **"/recall <keyword>"** | **Phase 5 (memory search)** |
-| **"/search <keyword>"** | **Phase 5 (same)** |
-| "team mode" / "share memory" | git add .claude/memory/ |
-
----
-
-## File Structure
-
-```
-<skill-dir>/                          ← .claude/skills/backend-brain
-├── SKILL.MD                          ← orchestrator (272 lines)
-├── README.md                         ← human-readable + positioning
-├── references/
-│   ├── preferences-system.md         ← Preferences Schema + Signal Map
-│   └── skill-orchestration.md        ← Third-party skill orchestration
-├── assets/templates/
-│   ├── claude-md-boilerplate.md      ← Onboarding: CLAUDE.md template
-│   ├── session-summary.md            ← Archive: session summary template
-│   └── preferences-default.json      ← Onboarding: initial preferences
-└── scripts/
-    ├── install.sh                    ← One-click install
-    ├── preflight.sh                  ← Pre-flight: env check → JSON
-    ├── git-summary.sh                ← Git change summary → JSON
-    ├── session-archive.sh            ← Archive: snapshot + index
-    ├── search-memory.sh              ← Lightweight memory search → JSON
-    └── test.sh                       ← Regression test suite
-
-Runtime output:
-.claude/memory/                       ← git track for team sharing
-├── index.json                        ← Multi-project index
-├── preferences.json                  ← User preferences
-└── projects/<name>/
-    ├── sessions/session-*.md         ← Session archives
-    └── last-session-hash             ← Git snapshot
-
-<project-root>/sql/                   ← Project root, NOT .claude/sql/.
-├── user.sql                          ← Idempotent: CREATE IF NOT EXISTS + INSERT IGNORE
-├── student.sql                       ← File header: -- @idempotent / -- @generated
-└── course-2.sql                      ← Split at ~200 lines
+backend-brain/
+├── SKILL.MD (<80 lines)  references/ (10 files, on-demand)
+├── adapters/ (4: cursor,gemini,copilot,windsurf)
+├── assets/templates/ (3)  scripts/ (9: preflight,git,archive,search,matcher,audit,install,test,bootstrap)
+└── Output: docs/*-TRACKING.md  sql/*.sql  .claude/memory/
 ```
