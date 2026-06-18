@@ -3,7 +3,7 @@
 # Usage: curl -fsSL <url>/bootstrap.sh | bash
 set -eu
 
-REPO="https://github.com/diao0520/-backend-brain.git"
+REPO="https://github.com/diao0520/backend-brain.git"
 BRANCH="main"
 TMP=$(mktemp -d)
 PROJECT="${1:-$(pwd)}"
