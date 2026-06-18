@@ -23,6 +23,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [Semantic Versioning]
 - Multi-word fuzzy memory search with scoring (`search-memory.sh`)
 - Input sanitization and injection protection
 - Cross-platform HOME detection
+- Performance benchmark suite (`scripts/benchmark.sh`): 13 scenarios, median-of-3 timing, baseline comparison with `--compare`
 
 ### Changed
 

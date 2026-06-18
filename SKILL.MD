@@ -66,6 +66,6 @@ Returning ≤24h → 1-line briefing | Returning >24h → full briefing
 backend-brain/
 ├── SKILL.MD (<80 lines)  references/ (10 files, on-demand)
 ├── adapters/ (4: cursor,gemini,copilot,windsurf)
-├── assets/templates/ (3)  scripts/ (9: preflight,git,archive,search,matcher,audit,install,test,bootstrap)
+├── assets/templates/ (3)  scripts/ (10: preflight,git,archive,search,matcher,audit,benchmark,install,test,bootstrap)
 └── Output: docs/*-TRACKING.md  sql/*.sql  .claude/memory/
 ```
