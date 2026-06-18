@@ -41,7 +41,7 @@ You: *重新解释 5 分钟的背景*                你: "继续" → 立刻开
 
 ```bash
 # One-line remote install (recommended) · 一行远程安装（推荐）
-curl -fsSL https://raw.githubusercontent.com/diao0520/-backend-brain/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/diao0520/backend-brain/main/scripts/bootstrap.sh | bash
 
 # Or local install · 或本地安装
 bash .claude/skills/backend-brain/scripts/install.sh
