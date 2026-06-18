@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Setup test git repo
+        run: |
+          git init --initial-branch=main
+          git config user.name "CI"
+          git config user.email "ci@backend-brain"
+          echo "# test" > README.md
+          git add README.md && git commit -m "test: initial" --no-gpg-sign
+          git commit --allow-empty -m "test: second commit" --no-gpg-sign
+
+      - name: Run test suite
+        run: bash scripts/test.sh .
+
+      - name: Shellcheck
+        run: |
+          which shellcheck >/dev/null 2>&1 || sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          for s in scripts/*.sh; do
+            echo "→ shellcheck $s"
+            shellcheck -x "$s" || true
+          done

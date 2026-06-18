@@ -15,7 +15,7 @@ if [ -z "$TABLE" ]; then
 fi
 
 if [ -z "$TABLE" ] || [ ! -f "$TABLE" ]; then
-  echo '{"error":"no tracking table found","files_scanned":0,"matches":[],"suggestions":[]}'
+  echo '{"error":"no tracking table found","files_scanned":0,"matches":[],"suggestions":[],"recommendation":"no_tracking_table"}'
   exit 0
 fi
 

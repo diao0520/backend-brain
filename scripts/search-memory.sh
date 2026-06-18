@@ -14,12 +14,12 @@ L="${3:-5}"
 ROOT="${HOME:-${USERPROFILE}}/.claude/memory/projects/${P}/sessions"
 
 if [ ! -d "$ROOT" ]; then
-  echo '{"results":[],"total":0,"query":"'"$K"'"}'
+  echo '{"results":[],"total":0,"query":"'"$K"'","method":"none"}'
   exit 0
 fi
 
 if [ -z "$K" ]; then
-  echo '{"results":[],"total":0,"query":""}'
+  echo '{"results":[],"total":0,"query":"","method":"none"}'
   exit 0
 fi
 
