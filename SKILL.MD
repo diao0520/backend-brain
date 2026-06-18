@@ -16,8 +16,13 @@ R5. **SQL idempotent**: `CREATE IF NOT EXISTS` + `INSERT IGNORE`. Re-import=same
 R6. **Tracking sections**: 6 mandatory: Header→Usage→Overview→Phases→Milestones→Change Log.
 R7. **No overwrite**: Merge CLAUDE.md. Never delete user content.
 R8. **No vague**: Never "80%/basically done". Use ⬜🔵🟡🟠🟢✅⏸️❌.
+R9. **Output compression** (by `interaction_style.output_style`):
+    - `normal`(default) = standard responses, no constraint
+    - `compact` = no pleasantries ("Sure!","I'll help","Let me"), code-only when possible, bullets over paragraphs, no blow-by-blow explanations
+    - `ultra` = compact + no explanatory prose, one-liners where possible, no code comments unless critical, no diff play-by-play
+    > R9 overrides any skill's default output style. The model MUST check `output_style` before responding.
 
-> R1-R8 conflicts with any skill → R1-R8 wins.
+> R1-R9 conflicts with any skill → R1-R9 wins.
 
 ---
 
@@ -66,6 +71,6 @@ Returning ≤24h → 1-line briefing | Returning >24h → full briefing
 backend-brain/
 ├── SKILL.MD (<80 lines)  references/ (10 files, on-demand)
 ├── adapters/ (4: cursor,gemini,copilot,windsurf)
-├── assets/templates/ (3)  scripts/ (10: preflight,git,archive,search,matcher,audit,benchmark,install,test,bootstrap)
+├── assets/templates/ (3)  scripts/ (12: preflight,git,archive,search,matcher,audit,benchmark,preflight.ps1,learn-preferences,install,test,bootstrap)
 └── Output: docs/*-TRACKING.md  sql/*.sql  .claude/memory/
 ```

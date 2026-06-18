@@ -107,8 +107,37 @@ OUT2=$(bash "$SCRIPT_DIR/audit-tracker.sh" "$P" "/nonexistent/path/TRACKING.md" 
 json_has_key "$OUT2" "error"       && ok "audit-tracker:missing_table_handled" || fail "audit-tracker:missing_table_handled" "no error"
 echo ""
 
-# ─ 7. install.sh --check ─
-echo "┌─ 7. install.sh --check"
+# ─ 7. preflight.ps1 (PowerShell) ─
+echo "┌─ 7. preflight.ps1"
+if command -v pwsh >/dev/null 2>&1; then
+  PS_OUT=$(pwsh -NoProfile -Command "& '$SCRIPT_DIR/preflight.ps1' '$P'" 2>&1) || true
+  echo "$PS_OUT" | grep -q '"git"' && ok "preflight.ps1:git_block" || fail "preflight.ps1:git_block" "$PS_OUT"
+  echo "$PS_OUT" | grep -q '"deps"' && ok "preflight.ps1:deps_block" || fail "preflight.ps1:deps_block" "$PS_OUT"
+  echo "$PS_OUT" | grep -q '"config"' && ok "preflight.ps1:config_block" || fail "preflight.ps1:config_block" "$PS_OUT"
+  echo "$PS_OUT" | grep -q '"dirty".*true\|"dirty".*false' && ok "preflight.ps1:dirty_boolean" || fail "preflight.ps1:dirty_boolean" "not boolean"
+else
+  warn "preflight.ps1" "pwsh not available"
+fi
+echo ""
+
+# ─ 8. learn-preferences.sh ─
+echo "┌─ 8. learn-preferences.sh"
+LP_OUT=$(bash "$SCRIPT_DIR/learn-preferences.sh" "test-project" '{"signal":"verbosity","value":"compact"}' 2>&1) || { fail "learn-preferences:exit_code" "$LP_OUT"; }
+echo "$LP_OUT" | grep -q '"recommendation"' && ok "learn-preferences:has_recommendation" || fail "learn-preferences:has_recommendation" "missing"
+echo "$LP_OUT" | grep -q '"changed"' && ok "learn-preferences:has_changed" || fail "learn-preferences:has_changed" "missing"
+echo "$LP_OUT" | grep -q '"verbosity"' && ok "learn-preferences:verbosity_updated" || fail "learn-preferences:verbosity_updated" "not updated"
+LP2_OUT=$(bash "$SCRIPT_DIR/learn-preferences.sh" "" "" 2>&1) || true
+echo "$LP2_OUT" | grep -q '"error"' && ok "learn-preferences:empty_args_error" || fail "learn-preferences:empty_args_error" "accepted empty args"
+LP3_OUT=$(bash "$SCRIPT_DIR/learn-preferences.sh" "test-project" '{"signal":"skip_agent","value":"code-reviewer"}' 2>&1) || true
+echo "$LP3_OUT" | grep -q '"skipped"' && ok "learn-preferences:skip_agent_works" || fail "learn-preferences:skip_agent_works" "missing skipped field"
+	LP4_OUT=$(bash "$SCRIPT_DIR/learn-preferences.sh" "test-project" '{"signal":"output_style","value":"compact"}' 2>&1) || true
+	echo "$LP4_OUT" | grep -q '"compact"' && ok "learn-preferences:output_style_compact" || fail "learn-preferences:output_style_compact" "not set to compact"
+	LP5_OUT=$(bash "$SCRIPT_DIR/learn-preferences.sh" "test-project" '{"signal":"output_style","value":"ultra"}' 2>&1) || true
+	echo "$LP5_OUT" | grep -q '"ultra"' && ok "learn-preferences:output_style_ultra" || fail "learn-preferences:output_style_ultra" "not set to ultra"
+echo ""
+
+# ─ 9. install.sh --check ─
+echo "┌─ 9. install.sh --check"
 DRY_OUT=$(bash "$SCRIPT_DIR/install.sh" --check 2>&1) || true
 echo "$DRY_OUT" | grep -q "DRY RUN\|Will install" && ok "install:dry_run_works" || fail "install:dry_run_works" "no dry run message"
 echo ""

@@ -34,46 +34,42 @@ if [ ! -s "$TMP_REG" ]; then
   exit 0
 fi
 
-# ── 2. Scoring function ──
+# ── 2. Scoring function (all bash built-ins, zero subprocess) ──
 score_skill() {
   local q="$1" name="$2" desc="$3"
   local score=0
-  local q_lower n_lower d_lower
-  q_lower=$(echo "$q" | tr '[:upper:]' '[:lower:]')
-  n_lower=$(echo "$name" | tr '[:upper:]' '[:lower:]')
-  d_lower=$(echo "$desc" | tr '[:upper:]' '[:lower:]')
+  local q_lower n_lower d_lower word kw
+
+  q_lower="${q,,}"; n_lower="${name,,}"; d_lower="${desc,,}"
 
   # Direct name contains query or query contains name
-  echo "$n_lower" | grep -qwF "$q_lower" 2>/dev/null && score=$((score + 100))
-  echo "$q_lower" | grep -qwF "$n_lower" 2>/dev/null && score=$((score + 80))
+  [[ "$n_lower" == *"$q_lower"* ]] && score=$((score + 100))
+  [[ "$q_lower" == *"$n_lower"* ]] && score=$((score + 80))
 
   # Hyphenated word match in name
-  for word in $(echo "$n_lower" | tr '-' ' '); do
+  for word in ${n_lower//-/ }; do
     [ ${#word} -lt 3 ] && continue
-    echo "$q_lower" | grep -qwF "$word" 2>/dev/null && score=$((score + 50))
+    [[ "$q_lower" == *"$word"* ]] && score=$((score + 50))
   done
 
   # Description keyword match
   for kw in $q_lower; do
     [ ${#kw} -lt 3 ] && continue
-    echo "$d_lower" | grep -qwF "$kw" 2>/dev/null && score=$((score + 30))
-    echo "$d_lower" | grep -qF "$kw" 2>/dev/null && score=$((score + 10))
+    [[ "$d_lower" == *"$kw"* ]] && score=$((score + 30))
   done
 
-  # Domain keyword bonus
-  case "$q_lower" in
-    *test*|*tdd*|*spec*)           echo "$n_lower" | grep -qE 'tdd|test' 2>/dev/null && score=$((score + 40)) ;;
-    *security*|*audit*|*vuln*)     echo "$n_lower" | grep -qE 'security|audit' 2>/dev/null && score=$((score + 40)) ;;
-    *build*|*compile*|*error*)     echo "$n_lower" | grep -qE 'build|error|resolver' 2>/dev/null && score=$((score + 40)) ;;
-    *review*|*lint*|*quality*)     echo "$n_lower" | grep -qE 'review|lint|quality' 2>/dev/null && score=$((score + 40)) ;;
-    *database*|*sql*|*query*)      echo "$n_lower" | grep -qE 'database|sql|postgres' 2>/dev/null && score=$((score + 40)) ;;
-    *refactor*|*clean*|*dead*)     echo "$n_lower" | grep -qE 'refactor|clean' 2>/dev/null && score=$((score + 40)) ;;
-    *deploy*|*docker*|*k8s*|*ci*)  echo "$n_lower" | grep -qE 'deploy|docker|ci|cd' 2>/dev/null && score=$((score + 40)) ;;
-    *doc*|*document*|*readme*)     echo "$n_lower" | grep -qE 'doc|readme' 2>/dev/null && score=$((score + 40)) ;;
-    *e2e*|*playwright*|*browser*)  echo "$n_lower" | grep -qE 'e2e|playwright|browser' 2>/dev/null && score=$((score + 40)) ;;
-    *frontend*|*ui*|*css*|*design*) echo "$n_lower" | grep -qE 'frontend|design|ui|css' 2>/dev/null && score=$((score + 40)) ;;
-    *perf*|*slow*|*optimize*)      echo "$n_lower" | grep -qE 'perf|performance|optimize' 2>/dev/null && score=$((score + 40)) ;;
-  esac
+  # Domain keyword bonus (all bash built-ins, no grep)
+  [[ "$q_lower" == *test* || "$q_lower" == *tdd* ]] && [[ "$n_lower" == *tdd* || "$n_lower" == *test* ]] && score=$((score + 40))
+  [[ "$q_lower" == *security* || "$q_lower" == *audit* || "$q_lower" == *vuln* ]] && [[ "$n_lower" == *security* || "$n_lower" == *audit* ]] && score=$((score + 40))
+  [[ "$q_lower" == *build* || "$q_lower" == *compile* || "$q_lower" == *error* ]] && [[ "$n_lower" == *build* || "$n_lower" == *error* || "$n_lower" == *resolver* ]] && score=$((score + 40))
+  [[ "$q_lower" == *review* || "$q_lower" == *lint* || "$q_lower" == *quality* ]] && [[ "$n_lower" == *review* || "$n_lower" == *lint* || "$n_lower" == *quality* ]] && score=$((score + 40))
+  [[ "$q_lower" == *database* || "$q_lower" == *sql* || "$q_lower" == *query* ]] && [[ "$n_lower" == *database* || "$n_lower" == *sql* || "$n_lower" == *postgres* ]] && score=$((score + 40))
+  [[ "$q_lower" == *refactor* || "$q_lower" == *clean* ]] && [[ "$n_lower" == *refactor* || "$n_lower" == *clean* ]] && score=$((score + 40))
+  [[ "$q_lower" == *deploy* || "$q_lower" == *docker* || "$q_lower" == *k8s* || "$q_lower" == *ci* ]] && [[ "$n_lower" == *deploy* || "$n_lower" == *docker* || "$n_lower" == *ci* || "$n_lower" == *cd* ]] && score=$((score + 40))
+  [[ "$q_lower" == *doc* || "$q_lower" == *document* || "$q_lower" == *readme* ]] && [[ "$n_lower" == *doc* || "$n_lower" == *readme* ]] && score=$((score + 40))
+  [[ "$q_lower" == *e2e* || "$q_lower" == *playwright* || "$q_lower" == *browser* ]] && [[ "$n_lower" == *e2e* || "$n_lower" == *playwright* || "$n_lower" == *browser* ]] && score=$((score + 40))
+  [[ "$q_lower" == *frontend* || "$q_lower" == *ui* || "$q_lower" == *css* || "$q_lower" == *design* ]] && [[ "$n_lower" == *frontend* || "$n_lower" == *design* || "$n_lower" == *ui* || "$n_lower" == *css* ]] && score=$((score + 40))
+  [[ "$q_lower" == *perf* || "$q_lower" == *slow* || "$q_lower" == *optimize* ]] && [[ "$n_lower" == *perf* || "$n_lower" == *performance* || "$n_lower" == *optimize* ]] && score=$((score + 40))
 
   echo "$score"
 }

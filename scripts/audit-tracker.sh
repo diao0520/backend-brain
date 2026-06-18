@@ -21,62 +21,64 @@ fi
 
 cd "$PROJECT"
 
-# ── 1. Get changed files ──
-CHANGED_FILES=""
+# ── 1. Get changed files into array ──
+FILES=()
 if git rev-parse --git-dir > /dev/null 2>&1; then
-  CHANGED_FILES=$( {
-    git diff --name-only HEAD 2>/dev/null
-    git diff --name-only --cached 2>/dev/null
-  } | sort -u | grep -v '^$' || true)
+  while IFS= read -r f; do
+    [ -n "$f" ] && FILES+=("$f")
+  done < <( { git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null; } | sort -u | grep -v '^$' || true)
 fi
 
-if [ -z "$CHANGED_FILES" ]; then
+FILE_COUNT=${#FILES[@]}
+if [ "$FILE_COUNT" -eq 0 ]; then
   echo '{"source":"git diff","files_scanned":0,"matches":[],"suggestions":[],"recommendation":"no_changes"}'
   exit 0
 fi
 
-FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
-
-# ── 2. Parse tracking table for rows with implementation paths ──
-ROWS=$(grep -E '^\|' "$TABLE" 2>/dev/null | grep -vE '^\|[- ]*\|' | grep -vE '编号|ID|Feature|功能' || true)
-
-# ── 3. Match loop ──
-MATCHES="["
-SUGGESTIONS="["
-M_FIRST=true
-S_FIRST=true
-
+# ── 2. Parse tracking table rows into array ──
+ROWS=()
 while IFS= read -r row; do
-  [ -z "$row" ] && continue
+  [ -n "$row" ] && ROWS+=("$row")
+done < <(grep -E '^\|' "$TABLE" 2>/dev/null | grep -vE '^\|[- ]*\|' | grep -vE '编号|ID|Feature|功能' || true)
 
-  IFS='|' read -r _ id feature desc acceptance impl_path extensible priority status progress scan notes <<< "$row"
+# ── 3. Match: single pass using arrays + bash built-ins ──
+MATCH_IDS="["
+SUGGESTIONS="["
+M_FIRST=true; S_FIRST=true
+# Track which files have been matched (associative array)
+declare -A FILE_MATCHED
 
-  id=$(echo "$id" | xargs)
-  impl_path=$(echo "$impl_path" | xargs)
-  status=$(echo "$status" | xargs)
+for row in "${ROWS[@]}"; do
+  # Parse fields
+  IFS='|' read -r _ id feature desc acceptance impl_path _status _progress _scan _notes <<< "$row"
+
+  # trim
+  id="${id## }"; id="${id%% }"
+  impl_path="${impl_path## }"; impl_path="${impl_path%% }"
+  _status="${_status## }"; _status="${_status%% }"
 
   [ -z "$id" ] && continue
   [ -z "$impl_path" ] && continue
-  echo "$id" | grep -qE '^[A-Za-z]{1,2}[0-9]{1,3}$' || continue
+  [[ "$id" =~ ^[A-Za-z]{1,2}[0-9]{1,3}$ ]] || continue
 
-  # Match changed files against implementation path
-  MATCHED=""
-  while IFS= read -r cf; do
-    [ -z "$cf" ] && continue
-    fb=$(basename "$cf")
+  # Match changed files using bash built-ins
+  MATCHED_FILES=""
+  for cf in "${FILES[@]}"; do
+    fb="${cf##*/}"
     matched=false
-    echo "$impl_path" | grep -qF "$cf" 2>/dev/null && matched=true
-    echo "$impl_path" | grep -qF "$fb" 2>/dev/null && matched=true
-    echo "$cf" | grep -qF "$impl_path" 2>/dev/null && matched=true
+    [[ "$impl_path" == *"$cf"* ]] && matched=true
+    [[ "$impl_path" == *"$fb"* ]] && matched=true
+    [[ "$cf" == *"$impl_path"* ]] && matched=true
     if [ "$matched" = true ]; then
-      MATCHED="${MATCHED:+$MATCHED, }$cf"
+      MATCHED_FILES="${MATCHED_FILES:+$MATCHED_FILES, }$cf"
+      FILE_MATCHED["$cf"]=1
     fi
-  done <<< "$CHANGED_FILES"
+  done
 
-  if [ -n "$MATCHED" ]; then
-    # Status transition logic
+  if [ -n "$MATCHED_FILES" ]; then
+    # Status transition (bash built-in pattern matching)
     NEW_STATUS=""
-    case "$status" in
+    case "$_status" in
       *"⬜"*|*"not_started"*) NEW_STATUS="🔵 in-progress" ;;
       *"🔵"*|*"in-progress"*) NEW_STATUS="🟢 mostly" ;;
       *"🟡"*|*"partial"*)     NEW_STATUS="🟠 half" ;;
@@ -84,55 +86,53 @@ while IFS= read -r row; do
       *"🟢"*|*"mostly"*)      NEW_STATUS="✅ done" ;;
     esac
 
-    safe_id=$(echo "$id" | xargs)
-    safe_feat=$(echo "$feature" | tr -d '\r' | xargs | sed 's/"/\\"/g')
-    safe_files=$(echo "$MATCHED" | sed 's/"/\\"/g')
+    safe_feat="${feature//\"/\\\"}"
+    safe_files="${MATCHED_FILES//\"/\\\"}"
+    safe_new="${NEW_STATUS//\"/\\\"}"
 
-    if [ "$M_FIRST" = false ]; then MATCHES="${MATCHES},"; fi
-    MATCHES="${MATCHES}{\"id\":\"$safe_id\",\"feature\":\"$safe_feat\",\"files\":\"$safe_files\"}"
+    [ "$M_FIRST" = false ] && MATCH_IDS="$MATCH_IDS,"
+    MATCH_IDS="${MATCH_IDS}{\"id\":\"$id\",\"feature\":\"$safe_feat\",\"files\":\"$safe_files\"}"
     M_FIRST=false
 
     if [ -n "$NEW_STATUS" ]; then
-      safe_new=$(echo "$NEW_STATUS" | sed 's/"/\\"/g')
-      if [ "$S_FIRST" = false ]; then SUGGESTIONS="${SUGGESTIONS},"; fi
-      SUGGESTIONS="${SUGGESTIONS}{\"id\":\"$safe_id\",\"action\":\"update_status\",\"from\":\"$status\",\"to\":\"$safe_new\"}"
+      [ "$S_FIRST" = false ] && SUGGESTIONS="$SUGGESTIONS,"
+      SUGGESTIONS="${SUGGESTIONS}{\"id\":\"$id\",\"action\":\"update_status\",\"from\":\"$_status\",\"to\":\"$safe_new\"}"
       S_FIRST=false
     fi
   fi
-done <<< "$ROWS"
+done
 
-MATCHES="${MATCHES}]"
+MATCH_IDS="${MATCH_IDS}]"
 SUGGESTIONS="${SUGGESTIONS}]"
 
-# ── 4. Untracked files ──
+# ── 4. Untracked: files not matched in any row ──
 UNTRACKED="["
 U_FIRST=true
-while IFS= read -r cf; do
-  [ -z "$cf" ] && continue
-  if ! echo "$MATCHES" | grep -qF "$cf" 2>/dev/null; then
-    if [ "$U_FIRST" = false ]; then UNTRACKED="${UNTRACKED},"; fi
-    safe_f=$(echo "$cf" | sed 's/"/\\"/g')
+for cf in "${FILES[@]}"; do
+  if [ -z "${FILE_MATCHED[$cf]:-}" ]; then
+    safe_f="${cf//\"/\\\"}"
+    [ "$U_FIRST" = false ] && UNTRACKED="$UNTRACKED,"
     UNTRACKED="${UNTRACKED}\"$safe_f\""
     U_FIRST=false
   fi
-done <<< "$CHANGED_FILES"
+done
 UNTRACKED="${UNTRACKED}]"
 
 # ── 5. Counts ──
-M_COUNT=$(echo "$MATCHES" | grep -o '"id"' | wc -l | tr -d ' ')
-S_COUNT=$(echo "$SUGGESTIONS" | grep -o '"id"' | wc -l | tr -d ' ')
-U_COUNT=0
-[ "$UNTRACKED" != "[]" ] && U_COUNT=$(echo "$UNTRACKED" | tr ',' '\n' | wc -l | tr -d ' ')
+M_COUNT="${M_FIRST:+0}"; [ "$M_FIRST" = false ] && M_COUNT=$(echo "$MATCH_IDS" | grep -o '"id"' | wc -l | tr -d ' ')
+S_COUNT="${S_FIRST:+0}"; [ "$S_FIRST" = false ] && S_COUNT=$(echo "$SUGGESTIONS" | grep -o '"id"' | wc -l | tr -d ' ')
+U_COUNT="${U_FIRST:+0}"; [ "$U_FIRST" = false ] && U_COUNT=${#UNTRACKED//[^,]}; U_COUNT=$((U_COUNT + 1))
 
 RECO="no_changes"
-[ "$M_COUNT" -gt 0 ] 2>/dev/null && RECO="update_tracking_table"
-[ "$U_COUNT" -gt 0 ] 2>/dev/null && RECO="${RECO}_and_review_untracked"
+[ "${M_COUNT:-0}" -gt 0 ] && RECO="update_tracking_table"
+[ "${U_COUNT:-0}" -gt 0 ] && [ "$RECO" = "update_tracking_table" ] && RECO="${RECO}_and_review_untracked"
+[ "${U_COUNT:-0}" -gt 0 ] && [ "$RECO" = "no_changes" ] && RECO="review_untracked"
 
 cat <<EOF
 {
   "source": "git diff",
   "files_scanned": $FILE_COUNT,
-  "matches": $MATCHES,
+  "matches": $MATCH_IDS,
   "match_count": $M_COUNT,
   "suggestions": $SUGGESTIONS,
   "suggestion_count": $S_COUNT,

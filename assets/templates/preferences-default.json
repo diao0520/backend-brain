@@ -9,6 +9,7 @@
   },
   "interaction_style": {
     "verbosity": "normal",
+    "output_style": "normal",
     "explanation_depth": "medium",
     "code_first": false,
     "show_diff_before_apply": null,

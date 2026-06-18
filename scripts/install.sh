@@ -50,7 +50,7 @@ command -v redis-cli >/dev/null 2>&1 && timeout 1 redis-cli ping >/dev/null 2>&1
 if $CHECK; then
     say ""
     say "${B}── DRY RUN ──${N}"
-    say "  Will install 26 files to: ${SKILL_DIR}"
+    say "  Will install 28 files to: ${SKILL_DIR}"
     say "  Will add Stop Hook to: ${SETTINGS}"
     say "  No source files will be modified"
     say ""
@@ -78,13 +78,13 @@ for f in SKILL.MD README.md \
          scripts/preflight.sh scripts/git-summary.sh \
          scripts/session-archive.sh scripts/search-memory.sh \
          scripts/skill-matcher.sh scripts/audit-tracker.sh \
-         scripts/benchmark.sh; do
+         scripts/benchmark.sh scripts/preflight.ps1 scripts/learn-preferences.sh; do
     cp "${SRC}/${f}" "${SKILL_DIR}/${f}"
 done
-say "  ${G}✅${N} 26 files"
+say "  ${G}✅${N} 28 files"
 
 # 4. Permissions
-chmod +x "${SKILL_DIR}/scripts/"*.sh 2>/dev/null || true
+chmod +x "${SKILL_DIR}/scripts/"*.sh "${SKILL_DIR}/scripts/"*.ps1 2>/dev/null || true
 say "  ${G}✅${N} Script permissions"
 
 # 5. Hook

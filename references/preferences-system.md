@@ -7,6 +7,7 @@
 | 字段 | 默认 | Phase | 用途 |
 |------|------|-------|------|
 | `interaction_style.verbosity` | `"normal"` | Phase 3 | compact=1行 / normal=标准 / verbose=详细 |
+| `interaction_style.output_style` | `"normal"` | Phase 3 | **输出压缩** normal=标准 / compact=去客套+代码优先 / ultra=极致压缩 |
 
 ## v2 预留
 
